@@ -276,26 +276,13 @@ def parse_hourly_forecast(forecast_data):
             weather_main = item['weather'][0]['main'].lower()
             weather_desc = item['weather'][0]['description'].lower()
             
-            # Map weather condition to icon
-            icon = '🌤️'  # default
-            if 'clear' in weather_main or 'sun' in weather_desc:
-                icon = '☀️'
-            elif 'cloud' in weather_main:
-                icon = '☁️'
-            elif 'rain' in weather_main or 'drizzle' in weather_main:
-                icon = '🌧️'
-            elif 'thunder' in weather_main:
-                icon = '⛈️'
-            elif 'snow' in weather_main:
-                icon = '❄️'
-            elif 'mist' in weather_main or 'fog' in weather_main or 'haze' in weather_main:
-                icon = '🌫️'
+            # Store condition string - UI will convert to PNG icon
+            condition = item['weather'][0]['main']
             
             forecast_points.append({
                 'datetime': dt_local,
                 'temperature': temp_celsius,
-                'icon': icon,
-                'condition': item['weather'][0]['main']
+                'condition': condition  # UI will load PNG icon based on condition
             })
         
         # Generate hourly data by interpolating between 3-hour intervals
@@ -336,22 +323,21 @@ def parse_hourly_forecast(forecast_data):
                 else:
                     temp = prev_point['temperature']
                 
-                # Use icon from the nearest point
+                # Use condition from the nearest point
                 if hours_from_prev < time_diff / 2:
-                    icon = prev_point['icon']
+                    condition = prev_point['condition']
                 else:
-                    icon = next_point['icon']
+                    condition = next_point['condition']
             else:
                 # Fallback if no points found
                 temp = 20.0  # Default temperature
-                icon = '🌤️'
+                condition = 'Unknown'
             
             hourly_list.append({
                 'time': target_hour.strftime("%H:%M"),
                 'hour': target_hour.hour,
                 'temperature': temp,
-                'icon': icon,
-                'condition': prev_point['condition'] if prev_point else 'Unknown'
+                'condition': condition  # UI will load PNG icon based on condition
             })
         
         return hourly_list

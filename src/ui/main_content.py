@@ -11,6 +11,8 @@ from .widgets import (
     create_hourly_card,
     create_daily_card,
 )
+from .icon_loader import load_icon
+from .theme import DETAIL_ICONS
 
 
 def build_main_content(parent, colors, *,
@@ -33,19 +35,19 @@ def build_main_content(parent, colors, *,
     current.grid(row=0, column=0, sticky='ew', pady=(0, 20))
 
     city_label = tk.Label(
-        current, text="Loading...", font=('Arial', 28, 'bold'),
+        current, text="Loading", font=('Arial', 22, 'bold'),
         bg=colors['bg_dark'], fg=colors['text_primary']
     )
     city_label.pack(pady=(0, 10))
 
     temp_label = tk.Label(
-        current, text="--°C", font=('Arial', 64, 'bold'),
+        current, text="Loading", font=('Arial', 48, 'bold'),
         bg=colors['bg_dark'], fg=colors['text_primary']
     )
     temp_label.pack()
 
     description_label = tk.Label(
-        current, text="Fetching weather...", font=('Arial', 20),
+        current, text="Loading", font=('Arial', 20),
         bg=colors['bg_dark'], fg=colors['text_secondary']
     )
     description_label.pack()
@@ -55,25 +57,34 @@ def build_main_content(parent, colors, *,
     details_frame.grid(row=1, column=0, sticky='ew', pady=(0, 20))
 
     detail_cards = []
-    for title, icon, default_value in [
-        ("Sunrise", "☀️", "--"),
-        ("Sunset", "🌙", "--"),
-        ("Visibility", "👁️", "--"),
-        ("UV Index", "☀️", "--"),
+    for title, icon_name, default_value in [
+        ("Sunrise", "sunrise", "Loading"),
+        ("Sunset", "sunset", "Loading"),
+        ("Visibility", "visibility", "Loading"),
+        ("UV Index", "uv", "Loading"),
     ]:
         card = tk.Frame(details_frame, bg=colors['card_bg'])
         card.pack(side='left', fill='both', expand=True, padx=5)
 
         header = tk.Frame(card, bg=colors['card_bg'])
         header.pack(fill='x', pady=(15, 5))
-        tk.Label(header, text=icon, font=('Arial', 20), bg=colors['card_bg']).pack(side='left', padx=(15, 5))
-        tk.Label(header, text=title, font=('Arial', 12), bg=colors['card_bg'], fg=colors['text_secondary']).pack(side='left')
+        
+        # Load icon as PhotoImage
+        icon_img = load_icon(icon_name, size=(20, 20))
+        icon_label = tk.Label(header, bg=colors['card_bg'])
+        if icon_img:
+            icon_label.config(image=icon_img)
+            icon_label.image = icon_img  # Keep reference
+        icon_label.pack(side='left', padx=(15, 5))
+        
+        title_label = tk.Label(header, text=title, font=('Arial', 10), bg=colors['card_bg'], fg=colors['text_secondary'])
+        title_label.pack(side='left')
 
         value_label = tk.Label(
-            card, text=default_value, font=('Arial', 16, 'bold'),
+            card, text=default_value, font=('Arial', 12, 'bold'),
             bg=colors['card_bg'], fg=colors['text_primary']
         )
-        value_label.pack(pady=(0, 15), padx=15, anchor='w')
+        value_label.pack(pady=(2, 15), padx=15, anchor='w')
         card.value_label = value_label
         detail_cards.append(card)
 
@@ -84,7 +95,7 @@ def build_main_content(parent, colors, *,
         scroll_left=scroll_hourly_left, scroll_right=scroll_hourly_right,
         card_width=hourly_card_width,
         card_builder=lambda f, i: create_hourly_card(
-            f, f"{(datetime.now().hour + i) % 24:02d}:00", "🌤️", "--°", colors
+            f, f"{(datetime.now().hour + i) % 24:02d}:00", "default", "--°", colors
         ),
         num_cards=24,
     )
@@ -96,7 +107,7 @@ def build_main_content(parent, colors, *,
         pady=(15, 0),
         scroll_left=scroll_daily_left, scroll_right=scroll_daily_right,
         card_width=daily_card_width,
-        card_builder=lambda f, i: create_daily_card(f, "---", "🌤️", "--°/--°", colors),
+        card_builder=lambda f, i: create_daily_card(f, "---", "default", "--°/--°", colors),
         num_cards=15,
     )
 

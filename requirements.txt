@@ -1,1 +1,2 @@
 requests==2.32.5
+cairosvg==2.7.1

@@ -14,12 +14,20 @@ COLORS = {
     'card_bg': '#2d2d44',
 }
 
-# Weather condition to emoji mapping
+# Weather condition to icon file mapping (PNG icons)
 WEATHER_ICONS = {
-    'clear': '☀️', 'sunny': '☀️', 'clouds': '☁️', 'cloudy': '☁️',
-    'rain': '🌧️', 'rainy': '🌧️', 'snow': '❄️', 'snowy': '❄️',
-    'thunderstorm': '⛈️', 'drizzle': '🌦️', 'mist': '🌫️', 'fog': '🌫️',
-    'haze': '🌫️', 'default': '🌤️',
+    'clear': 'sun', 'sunny': 'sun', 'clouds': 'cloud', 'cloudy': 'cloud',
+    'rain': 'rain', 'rainy': 'rain', 'snow': 'snow', 'snowy': 'snow',
+    'thunderstorm': 'thunderstorm', 'drizzle': 'drizzle', 'mist': 'fog', 'fog': 'fog',
+    'haze': 'fog', 'default': 'cloud',
+}
+
+# Detail card icon mapping
+DETAIL_ICONS = {
+    'sunrise': 'sunrise',
+    'sunset': 'sunset',
+    'visibility': 'visibility',
+    'uv': 'uv',
 }
 
 # Default list of German cities

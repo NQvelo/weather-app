@@ -3,6 +3,7 @@ Reusable UI widgets and drawing helpers for the Weather App.
 """
 import math
 import tkinter as tk
+from .icon_loader import load_icon, get_icon_for_condition
 
 
 def create_rounded_rect(canvas, x1, y1, x2, y2, radius, fill, outline=""):
@@ -82,7 +83,16 @@ def create_rounded_button(parent, text, command, colors):
 
 
 def create_hourly_card(parent, time, icon, temp, colors):
-    """Create a single hourly forecast card."""
+    """
+    Create a single hourly forecast card.
+    
+    Args:
+        parent: Parent widget
+        time: Time string (e.g., "14:00")
+        icon: Icon name (str) or PhotoImage object
+        temp: Temperature string (e.g., "20°C")
+        colors: Color dictionary
+    """
     card_canvas = tk.Canvas(
         parent, bg=colors['bg_medium'],
         highlightthickness=0, width=90, height=180
@@ -105,8 +115,20 @@ def create_hourly_card(parent, time, icon, temp, colors):
 
     time_label = tk.Label(card, text=time, font=('Arial', 11), bg=colors['card_bg'], fg=colors['text_secondary'])
     time_label.pack(pady=(8, 3))
-    icon_label = tk.Label(card, text=icon, font=('Arial', 20), bg=colors['card_bg'])
+    
+    # Handle icon - can be PhotoImage or icon name string
+    icon_label = tk.Label(card, bg=colors['card_bg'])
+    if isinstance(icon, tk.PhotoImage):
+        icon_label.config(image=icon)
+        icon_label.image = icon  # Keep reference
+    elif isinstance(icon, str):
+        # Try to load icon by name first, then by condition
+        icon_img = load_icon(icon, size=(32, 32)) or get_icon_for_condition(icon, size=(32, 32)) or load_icon('default', size=(32, 32))
+        if icon_img:
+            icon_label.config(image=icon_img)
+            icon_label.image = icon_img  # Keep reference
     icon_label.pack(pady=4)
+    
     temp_label = tk.Label(card, text=temp, font=('Arial', 18, 'bold'), bg=colors['card_bg'], fg=colors['text_primary'])
     temp_label.pack(pady=(3, 8))
 
@@ -118,7 +140,16 @@ def create_hourly_card(parent, time, icon, temp, colors):
 
 
 def create_daily_card(parent, day, icon, temp_str, colors):
-    """Create a daily forecast card (same layout as hourly)."""
+    """
+    Create a daily forecast card (same layout as hourly).
+    
+    Args:
+        parent: Parent widget
+        day: Day string (e.g., "Mon 27")
+        icon: Icon name (str) or PhotoImage object
+        temp_str: Temperature string (e.g., "20°/15°")
+        colors: Color dictionary
+    """
     card_canvas = tk.Canvas(
         parent, bg=colors['bg_medium'],
         highlightthickness=0, width=90, height=180
@@ -141,8 +172,20 @@ def create_daily_card(parent, day, icon, temp_str, colors):
 
     day_label = tk.Label(card, text=day, font=('Arial', 11), bg=colors['card_bg'], fg=colors['text_secondary'])
     day_label.pack(pady=(8, 3))
-    icon_label = tk.Label(card, text=icon, font=('Arial', 20), bg=colors['card_bg'])
+    
+    # Handle icon - can be PhotoImage or icon name string
+    icon_label = tk.Label(card, bg=colors['card_bg'])
+    if isinstance(icon, tk.PhotoImage):
+        icon_label.config(image=icon)
+        icon_label.image = icon  # Keep reference
+    elif isinstance(icon, str):
+        # Try to load icon by name first, then by condition
+        icon_img = load_icon(icon, size=(32, 32)) or get_icon_for_condition(icon, size=(32, 32)) or load_icon('default', size=(32, 32))
+        if icon_img:
+            icon_label.config(image=icon_img)
+            icon_label.image = icon_img  # Keep reference
     icon_label.pack(pady=4)
+    
     temp_label = tk.Label(card, text=temp_str, font=('Arial', 18, 'bold'), bg=colors['card_bg'], fg=colors['text_primary'])
     temp_label.pack(pady=(3, 8))
 

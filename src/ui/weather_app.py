@@ -9,6 +9,7 @@ from .theme import COLORS, WEATHER_ICONS, GERMAN_CITIES
 from .weather_controller import WeatherController
 from .sidebar import build_sidebar
 from .main_content import build_main_content
+from .icon_loader import get_icon_for_condition, load_icon
 
 
 class WeatherApp:
@@ -119,8 +120,13 @@ class WeatherApp:
     def on_weather_success(self, data):
         self.current_weather_data = data
         self.city_label.config(text=data['city'])
-        icon = self.get_weather_icon(data['main'])
-        self.description_label.config(text=f"{icon} {data['description']}")
+        icon_img = self.get_weather_icon(data['main'], size=(32, 32))
+        if icon_img:
+            # Clear any existing text/image and set new image with text
+            self.description_label.config(image=icon_img, text=f"  {data['description']}", compound='left')
+            self.description_label.image = icon_img  # Keep reference
+        else:
+            self.description_label.config(image='', text=data['description'])
 
         self.detail_cards[0].value_label.config(text=data.get('sunrise', 'N/A'))
         self.detail_cards[1].value_label.config(text=data.get('sunset', 'N/A'))
@@ -135,7 +141,31 @@ class WeatherApp:
     def on_loading(self, is_loading, message):
         self.root.config(cursor="wait" if is_loading else "")
         if is_loading:
+            self._show_loading_state()
             self.root.update()
+
+    def _show_loading_state(self):
+        """Show 'Loading' in all main content areas while fetching."""
+        c = self.colors
+        self.city_label.config(text="Loading")
+        self.temp_label.config(text="Loading")
+        self.description_label.config(image='', text="Loading")
+        if hasattr(self.description_label, 'image'):
+            self.description_label.image = None
+        for card in self.detail_cards:
+            card.value_label.config(text="Loading")
+        for card in self.hourly_cards:
+            card.time_label.config(text="Loading")
+            card.temp_label.config(text="")
+            card.icon_label.config(image='', text="Loading", fg=c['text_secondary'])
+            if hasattr(card.icon_label, 'image'):
+                card.icon_label.image = None
+        for card in self.daily_cards:
+            card.day_label.config(text="Loading")
+            card.temp_label.config(text="")
+            card.icon_label.config(image='', text="Loading", fg=c['text_secondary'])
+            if hasattr(card.icon_label, 'image'):
+                card.icon_label.image = None
 
     # --- Search ---
 
@@ -149,11 +179,18 @@ class WeatherApp:
 
     # --- Helpers ---
 
-    def get_weather_icon(self, condition):
-        for key in self.weather_icons:
-            if key in condition.lower():
-                return self.weather_icons[key]
-        return self.weather_icons['default']
+    def get_weather_icon(self, condition, size=(32, 32)):
+        """
+        Get PhotoImage icon for weather condition.
+        
+        Args:
+            condition: Weather condition string
+            size: Optional tuple (width, height) for icon size, defaults to (32, 32)
+        
+        Returns:
+            tk.PhotoImage: The icon image
+        """
+        return get_icon_for_condition(condition, size=size) or load_icon('default', size=size)
 
     def update_temperature_displays(self, data):
         if self.temp_unit == 'fahrenheit':
@@ -175,16 +212,24 @@ class WeatherApp:
                     temp_display = self.controller.convert_temperature(temp_c, 'fahrenheit') if self.temp_unit == 'fahrenheit' else temp_c
                     card.time_label.config(text=item['time'])
                     card.temp_label.config(text=f"{temp_display:.0f}{unit_symbol}")
-                    card.icon_label.config(text=self.get_weather_icon(item.get('condition', 'Unknown')))
+                    icon_img = self.get_weather_icon(item.get('condition', 'Unknown'), size=(32, 32))
+                    if icon_img:
+                        card.icon_label.config(image=icon_img, text='')
+                        card.icon_label.image = icon_img  # Keep reference
+                    else:
+                        card.icon_label.config(image='', text='')
                 else:
                     card.time_label.config(text="--:--")
                     card.temp_label.config(text=f"--{unit_symbol}")
-                    card.icon_label.config(text="🌤️")
+                    default_icon = load_icon('default', size=(32, 32))
+                    if default_icon:
+                        card.icon_label.config(image=default_icon)
+                        card.icon_label.image = default_icon
         else:
             base_temp = data['temp_celsius']
             current_hour = datetime.now().hour
             current_condition = data.get('main', 'Unknown')
-            base_icon = self.get_weather_icon(current_condition)
+            base_icon = self.get_weather_icon(current_condition, size=(32, 32))
             for i, card in enumerate(self.hourly_cards):
                 hour = (current_hour + i) % 24
                 temp_variation = ((i % 8) - 3.5) * 1.5
@@ -193,10 +238,18 @@ class WeatherApp:
                 card.time_label.config(text=f"{hour:02d}:00")
                 card.temp_label.config(text=f"{hourly_temp:.0f}{unit_symbol}")
                 if hour >= 20 or hour < 6:
-                    hourly_icon = "🌙" if 'clear' in current_condition.lower() or 'sun' in current_condition.lower() else base_icon
+                    # Use moon icon for night, or base icon
+                    if 'clear' in current_condition.lower() or 'sun' in current_condition.lower():
+                        hourly_icon = load_icon('sunset', size=(32, 32)) or base_icon
+                    else:
+                        hourly_icon = base_icon
                 else:
                     hourly_icon = base_icon
-                card.icon_label.config(text=hourly_icon)
+                if hourly_icon:
+                    card.icon_label.config(image=hourly_icon, text='')
+                    card.icon_label.image = hourly_icon
+                else:
+                    card.icon_label.config(image='', text='')
 
         # Daily
         daily_forecast = data.get('daily_forecast', [])
@@ -213,16 +266,31 @@ class WeatherApp:
                     temp_str = f"{high:.0f}°/ {low:.0f}°" if (high is not None and low is not None) else "--°/--°"
                     card.day_label.config(text=entry.get('day', '---'))
                     card.temp_label.config(text=temp_str)
-                    card.icon_label.config(text=self.get_weather_icon(entry.get('condition', 'default')))
+                    icon_img = self.get_weather_icon(entry.get('condition', 'default'), size=(32, 32))
+                    if icon_img:
+                        card.icon_label.config(image=icon_img, text='')
+                        card.icon_label.image = icon_img  # Keep reference
+                    else:
+                        card.icon_label.config(image='', text='')
                 else:
                     card.day_label.config(text="---")
                     card.temp_label.config(text="--°/--°")
-                    card.icon_label.config(text="🌤️")
+                    default_icon = load_icon('default', size=(32, 32))
+                    if default_icon:
+                        card.icon_label.config(image=default_icon, text='')
+                        card.icon_label.image = default_icon
+                    else:
+                        card.icon_label.config(image='', text='')
         else:
+            default_icon = load_icon('default', size=(32, 32))
             for card in self.daily_cards:
                 card.day_label.config(text="---")
                 card.temp_label.config(text="--°/--°")
-                card.icon_label.config(text="🌤️")
+                if default_icon:
+                    card.icon_label.config(image=default_icon)
+                    card.icon_label.image = default_icon
+                else:
+                    card.icon_label.config(image='', text='')
 
         # Sidebar city temps
         for _, _, temp_label, btn_city in self.city_buttons:
